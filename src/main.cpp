@@ -5,8 +5,9 @@
 
 const std::string keys =
   "{help h usage ? |     | 输出命令行参数说明}"
-  "{@model-path    |     | 模型文件路径 }"
-  "{device d       | CPU | 设备类型}";
+  "{@model-path    |     | 模型文件路径}"
+  "{gpu            |     | 使用GPU}"
+  "{gray           |     | 单通道输入}";
 
 void print_devices(const ov::Core & core)
 {
@@ -38,7 +39,8 @@ void print_compiled_model_info(const ov::CompiledModel & compiled_model)
 class Model
 {
 public:
-  Model(const std::string & model_path, const std::string & device, int height, int width)
+  Model(
+    const std::string & model_path, const std::string & device, int height, int width, bool gray)
   {
     ov::Core core;
     print_devices(core);
@@ -59,7 +61,7 @@ public:
 
     input.preprocess()
       .convert_element_type(ov::element::f32)
-      .convert_color(ov::preprocess::ColorFormat::RGB)
+      .convert_color(gray ? ov::preprocess::ColorFormat::GRAY : ov::preprocess::ColorFormat::RGB)
       .resize(ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR)
       .scale(255);
 
@@ -95,10 +97,14 @@ int main(int argc, char * argv[])
   auto model_path = cli.get<std::string>("@model-path");
   std::cout << "model_path: " << model_path << "\n";
 
-  auto device = cli.get<std::string>("device");
+  auto use_gpu = cli.has("gpu");
+  std::string device = use_gpu ? "GPU" : "CPU";
   std::cout << "device: " << device << "\n";
 
-  Model model(model_path, device, 1024, 1280);
+  auto gray = cli.has("gray");
+  std::cout << "gray: " << gray << "\n";
+
+  Model model(model_path, device, 1024, 1280, gray);
   cv::VideoCapture cap("video.avi");
 
   cv::Mat img;
